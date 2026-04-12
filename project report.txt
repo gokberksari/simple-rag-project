@@ -1,0 +1,404 @@
+1
+DOKUZ EYLÜL UNIVERSITY
+ENGINEERING FACULTY
+DEPARTMENT OF COMPUTER ENGINEERING
+
+CME4418 — INTRODUCTION TO ARTIFICIAL
+INTELLIGENCE
+INTELLIGENT DOCUMENT Q&A SYSTEM
+USING RETRIEVAL AUGMENTED GENERATION
+(RAG)
+by
+Gökberk Sarı
+2018510155
+Advisor
+Assoc. Prof. Dr. Özlem VARLIKLAR
+February, 2026 İZMİR
+2
+INTELLIGENT DOCUMENT Q&A SYSTEM USING RETRIEVAL
+AUGMENTED GENERATION (RAG)
+ABSTRACT
+Retrieval-Augmented Generation (RAG) has emerged as a promising approach to
+address one of the most fundamental limitations of large language models: the inability
+to reliably access and reason over external, domain-specific, or recently published
+knowledge. By combining dense vector retrieval with generative language models,
+RAG systems ground their outputs in verifiable source documents, significantly
+reducing hallucination and improving factual accuracy.
+In this project, we propose the design and implementation of a web-based Intelligent
+Document Q&A system that leverages RAG architecture to enable natural language
+querying over user-uploaded PDF documents. The system targets students and
+researchers who need to extract specific information from academic papers and reports
+without reading entire documents. Users upload their documents through a web
+interface, which are then processed, chunked, and indexed into a vector database. At
+query time, semantically relevant passages are retrieved and supplied as context to
+Anthropic's Claude API, which generates accurate, grounded responses alongside the
+source passages used.
+The main contributions of this project are: a fully functional RAG pipeline covering
+document ingestion, semantic chunking, embedding-based retrieval, and contextaugmented generation; a clean web interface supporting real-time document upload and
+conversational querying; a source-attribution mechanism that displays the retrieved
+passages behind each answer to ensure transparency; and a comparative evaluation of
+the system against a no-retrieval baseline, examining the effect of chunk size on answer
+quality. The project draws on recent advances in the field, including Self-RAG,
+Adaptive-RAG, GraphRAG, and contextual retrieval techniques, and is implemented
+using Python, FastAPI, FAISS, and the Anthropic Claude API. 
+3
+CONTENTS
+
+ 1. INTRODUCTION ............................................................................................. 5
+ 2. BACKGROUND ............................................................................................... 6
+2.1 Large Language Models And Their Limitations ........................................... 6
+2.2 Information Retrieval And Vector Search .................................................... 6
+2.3 The RAG Paradigm. ...................................................................................... 7
+ 3. LITERATURE REVIEW ................................................................................ 8
+3.1 Foundational Work........................................................................................ 8
+3.2 Advances in RAG Architecture ................................................................... 9
+3.3 Advanced RAG Variants .............................................................................. 9
+3.4 Evaluation and Benchmarking .................................................................... 10
+3.5 Domain-Specific Applications .................................................................... 11
+3.6 Chunking Strategies .................................................................................... 11
+ 4. PROJECT OBJECTIVE AND SCOPE ........................................................ 12
+4.1 Objective ...................................................................................................... 12
+4.2 Scope ............................................................................................................ 12
+4.3 Use Case ....................................................................................................... 12
+ 5. SYSTEM ARCHITECTURE AND FLOWCHART ................................... 13
+5.1 Indexing Phase ............................................................................................. 13
+5.2 Querying Phase .......................................................................................... 13
+ 6. TOOLS AND TECHNOLOGIES ................................................................. 15
+ 
+4
+7. EXPECTED OUTCOMES AND CHALLANGES ............................................ 16
+7.1 Expected Outcomes .................................................................................... 16
+7.2 Anticipated Challanges ............................................................................... 17
+ REFERENCES ................................................................................................... 18 
+5
+INTRODUCTION
+1. Introduction
+The exponential growth of digital documents — research papers, technical reports,
+manuals, and academic literature — has created a significant challenge: how can users
+efficiently extract relevant information from large collections of unstructured text?
+Traditional keyword-based search engines return documents but do not synthesize
+answers, placing the burden of comprehension on the user. Meanwhile, recent advances
+in Large Language Models (LLMs) have demonstrated remarkable natural language
+understanding and generation capabilities, yet these models suffer from a welldocumented limitation known as hallucination — the tendency to generate plausiblesounding but factually incorrect information, particularly when queried about specific or
+recent knowledge not present in their training data.
+Retrieval-Augmented Generation (RAG) has emerged as a powerful paradigm that
+addresses this limitation by grounding LLM responses in retrieved, verifiable context.
+Rather than relying solely on parametric knowledge encoded in model weights, RAG
+systems dynamically retrieve relevant document passages at inference time and supply
+them as context to the language model. This hybrid approach combines the fluency and
+reasoning ability of generative models with the precision and verifiability of
+information retrieval systems.
+This report presents the first phase of a project aimed at building an intelligent, webbased Document Q&A system leveraging RAG architecture and Anthropic's Claude
+API. The system will allow users to upload academic documents or research reports in
+PDF format and interact with them through a natural language interface, receiving
+accurate, context-grounded answers with source references. 
+6
+BACKGROUND
+2. Background
+This section provides the necessary technical context for understanding the motivation
+and design of the proposed system. It begins with an overview of large language models
+and their known limitations, followed by a discussion of information retrieval
+techniques and how they evolved toward dense vector search, and concludes with an
+introduction to the RAG paradigm that bridges these two areas.
+2.1 Large Language Models and Their Limitations
+Large Language Models such as GPT-4 (OpenAI, 2023), Claude (Anthropic, 2023), and
+LLaMA (Meta AI, 2023) are transformer-based neural networks trained on massive
+corpora of text data. They have demonstrated strong performance across a wide range of
+natural language processing tasks including summarization, translation, question
+answering, and code generation. However, their knowledge is static — frozen at the
+time of training — and they lack access to private, domain-specific, or recently
+published information. This creates two core problems in knowledge-intensive
+applications: knowledge staleness and hallucination.
+Hallucination, in particular, is a critical concern for high-stakes domains such as
+academic research, healthcare, and legal analysis. Studies have shown that LLMs can
+confidently fabricate citations, misattribute findings, and generate incorrect factual
+claims (Ji et al., 2023). Fine-tuning on domain-specific data is one mitigation strategy,
+but it is computationally expensive and does not scale well to rapidly changing
+knowledge bases. 
+7
+2.2 Information Retrieval and Vector Search
+Classical information retrieval (IR) systems rely on lexical matching techniques such as
+TF-IDF and BM25, which match query terms to document terms. While effective for
+keyword search, these methods fail to capture semantic similarity — a query about
+"cardiac arrest" may not retrieve a document discussing "heart failure" despite their
+conceptual overlap.
+Dense vector retrieval, enabled by neural embedding models, addresses this limitation
+by mapping both queries and documents into a shared high-dimensional semantic space.
+Similarity between a query and a document is then computed as the cosine similarity (or
+dot product) between their vector representations. This approach, popularized by the
+Dense Passage Retrieval (DPR) model (Karpukhin et al., 2020), significantly
+outperforms lexical methods on open-domain question answering benchmarks.
+2.3 The RAG Paradigm
+RAG was formally introduced by Lewis et al. (2020) in their seminal paper "RetrievalAugmented Generation for Knowledge-Intensive NLP Tasks." The framework combines
+a parametric memory component (the LLM) with a non-parametric memory component
+(a retrieval system over a document index). At inference time, the model retrieves the
+top-k most relevant passages for a given query and conditions its generation on both the
+query and the retrieved passages. This simple yet powerful idea has since spawned a
+rich line of research and industrial adoption. 
+8
+LITERATURE REVIEW
+3. Literature Review
+The body of research on RAG has grown substantially since its introduction in 2020,
+spanning foundational retrieval methods, architectural innovations, evaluation
+frameworks, and domain-specific applications. This section surveys the most relevant
+works, organized chronologically and thematically, to situate the proposed project
+within the current state of the field.
+3.1 Foundational Work
+Lewis et al. (2020) introduced the original RAG framework, training end-to-end models
+that jointly learned to retrieve and generate. They demonstrated significant
+improvements over purely parametric models on open-domain QA tasks such as Natural
+Questions and TriviaQA. This work established the conceptual foundation that
+separating knowledge storage (retrieval index) from reasoning (LLM) leads to more
+factually accurate and updatable systems.
+Karpukhin et al. (2020) proposed Dense Passage Retrieval (DPR), showing that dense
+embeddings trained with a simple bi-encoder architecture substantially outperform
+BM25 for passage retrieval. DPR became the de facto retrieval backbone for many early
+RAG systems and remains influential in modern implementations. 
+9
+3.2 Advances in RAG Architecture (2021–2023)
+Borgeaud et al. (2022) introduced RETRO (Retrieval-Enhanced Transformer), which
+incorporated retrieval not just at the input level but throughout the model's layers via
+chunked cross-attention. RETRO achieved GPT-3-level performance with significantly
+fewer parameters by offloading knowledge storage to a retrieval database,
+demonstrating the efficiency gains possible through retrieval augmentation.
+Izacard et al. (2021) proposed Fusion-in-Decoder (FiD), a method where multiple
+retrieved passages are encoded independently but fused during the decoder stage. This
+approach proved especially effective for multi-hop reasoning tasks where the answer
+requires synthesizing information from several documents.
+Shi et al. (2023) investigated the problem of irrelevant context distraction, finding that
+LLMs can be negatively affected by retrieved passages that are superficially related but
+do not contain the answer. Their work highlighted the importance of retrieval quality
+and re-ranking as critical components of RAG pipelines.
+3.3 Advanced RAG Variants (2023–2024)
+The rapid proliferation of RAG research has led to a taxonomy of increasingly
+sophisticated architectures:
+Gao et al. (2023) provided a comprehensive survey of RAG techniques, categorizing
+them into Naive RAG, Advanced RAG, and Modular RAG. Naive RAG refers to the
+straightforward retrieve-then-generate pipeline. Advanced RAG introduces pre-retrieval
+steps (query rewriting, HyDE — hypothetical document embeddings) and post-retrieval
+steps (re-ranking, context compression). Modular RAG treats each component as a
+replaceable module, enabling flexible composition. 
+10
+Asai et al. (2023) proposed Self-RAG, a framework where the LLM itself learns to
+decide when to retrieve, what to retrieve, and how to critique its own generated output
+using special reflection tokens. Self-RAG demonstrated that adaptive retrieval — only
+retrieving when necessary — can outperform always-retrieving baselines.
+Jeong et al. (2024) introduced Adaptive-RAG, which dynamically selects the retrieval
+strategy (no retrieval, single-step, or multi-step) based on the complexity of the
+incoming query, using a lightweight classifier trained on query difficulty. This work
+addressed the efficiency-accuracy trade-off in RAG systems.
+Edge et al. (2024) from Microsoft Research proposed GraphRAG, which constructs a
+knowledge graph from the document corpus and uses graph-based community detection
+to create hierarchical summaries, enabling more effective retrieval for queries that
+require a global understanding of the document collection rather than pinpointed
+passage lookup.
+3.4 Evaluation and Benchmarking
+Es et al. (2023) introduced RAGAS (Retrieval Augmented Generation Assessment), a
+framework for evaluating RAG pipelines along three dimensions: faithfulness (is the
+answer grounded in the retrieved context?), answer relevance (does the answer address
+the question?), and context relevance (was the retrieved context actually useful?).
+RAGAS has become a standard evaluation toolkit in the field.
+Chen et al. (2024) conducted a systematic benchmarking study comparing different
+chunking strategies, embedding models, and retrieval methods across multiple
+document types. They found that chunk size has a significant impact on performance:
+smaller chunks (128–256 tokens) favor precise factual retrieval while larger chunks
+(512–1024 tokens) better support questions requiring broader context. 
+11
+3.5 Domain-Specific Applications
+RAG has been successfully applied across numerous domains in recent years. In the
+biomedical domain, Xiong et al. (2024) demonstrated that RAG-based systems
+significantly reduce hallucinations compared to vanilla LLMs when answering clinical
+questions. In the legal domain, Louis et al. (2024) built a RAG system for statutory
+interpretation that achieved near-expert-level accuracy on legal reasoning benchmarks.
+In the educational domain, Abdelghani et al. (2023) applied RAG to build personalized
+tutoring systems that answer student questions grounded in course materials, directly
+analogous to the system proposed in this project.
+3.6 Chunking Strategies
+A critical but often overlooked component of RAG systems is the document chunking
+strategy — how documents are split into retrievable units. Kamradt (2023) proposed
+semantic chunking, where splits occur at semantically meaningful boundaries rather
+than fixed token counts, resulting in more coherent retrieved passages. Anthropic
+(2024) and other practitioners have explored contextual retrieval, which prepends a
+brief context summary to each chunk before embedding, significantly improving
+retrieval accuracy for ambiguous passages. 
+12
+PROJECT OBJECTIVE AND SCOPE
+4. Project Objective and Scope
+Building on the surveyed literature, this section defines the concrete goals and
+boundaries of the proposed system. It outlines the primary objective of the project,
+describes the intended scope and constraints, and identifies the target user and use cases
+that motivate the design decisions made in subsequent sections.
+4.1 Objective
+The primary objective of this project is to design and implement a web-based Intelligent
+Document Q&A system that enables users to upload academic PDF documents and
+query them in natural language. The system will leverage RAG architecture to provide
+accurate, context-grounded answers and will display the source passages used to
+generate each response, promoting transparency and verifiability.
+4.2 Scope
+The system will support single-document and multi-document querying, handle PDF
+files of up to 50 pages, and provide a clean, intuitive web interface accessible without
+technical expertise. The scope is intentionally constrained to English-language academic
+documents to maintain focus and manageability within the project timeline. Real-time
+indexing (i.e., the user uploads a document and can immediately query it) is a core
+requirement.
+4.3 Use Case
+The primary target user is a student or researcher who needs to quickly extract specific
+information from a research paper or report without reading the entire document.
+Secondary use cases include comparing information across multiple uploaded
+documents and generating summaries of specific sections. 
+13
+SYSTEM ARCHITECTURE AND FLOWCHART
+5. System Architecture and Flowchart
+The system follows a two-phase RAG pipeline: an offline indexing phase (triggered
+when a document is uploaded) and an online querying phase (triggered when the user
+submits a question).
+5.1 Indexing Phase
+• Document Upload — The user uploads a PDF file through the web interface.
+• Text Extraction — The PDF is parsed and raw text is extracted using
+PyMuPDF or pdfplumber.
+• Text Chunking — The extracted text is split into overlapping chunks of
+approximately 500 tokens with a 50-token overlap to preserve context at
+boundaries.
+• Embedding Generation — Each chunk is converted into a dense vector
+representation using a sentence embedding model (sentence-transformers/allMiniLM-L6-v2).
+• Vector Storage — The chunk embeddings and their corresponding text are
+stored in a FAISS vector index, along with metadata (page number, document
+name).
+5.2 Querying Phase
+• User Query — The user types a natural language question in the chat interface.
+• Query Embedding — The query is embedded using the same sentence
+embedding model.
+• Similarity Search — The query vector is compared against all chunk vectors in
+the FAISS index using cosine similarity; the top-5 most similar chunks are
+retrieved.
+• Prompt Construction — A structured prompt is built, inserting the retrieved
+chunks as context along with the user's question and a system instruction to
+answer only based on the provided context. 
+14
+• LLM Generation — The prompt is sent to Anthropic's Claude API (claudehaiku-4-5), which generates a grounded natural language answer.
+• Response Display — The answer is displayed in the chat interface along with
+the retrieved source chunks highlighted as references.
+┌─────────────────────────────────────────────────────────────┐
+│ INDEXING PHASE │
+│ │
+│ PDF Upload → Text Extraction → Chunking → Embedding │
+│ ↓ │
+│ FAISS Index │
+└─────────────────────────────────────────────────────────────┘
+↕
+┌─────────────────────────────────────────────────────────────┐
+│ QUERYING PHASE │
+│ │
+│ User Query → Query Embedding → Similarity Search │
+│ ↓ │
+│ Top-K Chunks │
+│ ↓ │
+│ Prompt Construction │
+│ ↓ │
+│ Claude API Call │
+│ ↓ │
+│ Answer + Source Display │
+└─────────────────────────────────────────────────────────────┘
+Figure 5.1. General Flow Diagram of The App’s Indexing and Querying Phases.
+15
+TOOLS AND TECHNOLOGIES
+6. Tools and Technologies
+Table 6.1 Tools and Technologies Overview.
+Component Tool / Library Justification
+Backend
+Framework Python + FastAPI Lightweight, async-capable, easy API
+development
+Frontend React.js Component-based UI, good for chat
+interfaces
+PDF Parsing PyMuPDF (fitz) Fast, accurate text extraction with
+layout preservation
+Text Chunking LangChain TextSplitter Configurable, well-tested chunking
+utilities
+Embedding
+Model
+sentence-transformers (allMiniLM-L6-v2)
+Free, runs locally, strong performance
+on semantic similarity
+Vector Database FAISS (Facebook AI) Lightweight, in-memory, no
+infrastructure overhead
+LLM Anthropic Claude API
+(claude-haiku-4-5)
+Fast, cost-effective, strong instruction
+following
+Deployment Docker + local/cloud Reproducible environment 
+16
+EXPECTED OUTCOMES AND CHALLANGES
+7. Expected Outcomes and Challenges
+This section discusses what the completed system is expected to achieve and identifies
+the key technical challenges that are likely to arise during development. Understanding
+these challenges in advance allows for more informed design decisions and sets realistic
+expectations for the project's scope and limitations.
+7.1 Expected Outcomes
+Upon completion, the system is expected to accurately answer factual questions
+grounded in uploaded documents with minimal hallucination, provide source references
+for every generated answer to support user verification, handle multi-document queries
+by retrieving relevant chunks across the entire indexed corpus, and demonstrate
+measurable improvement over a no-RAG baseline (direct LLM querying without
+retrieval) on a set of manually curated test questions. 
+17
+7.2 Anticipated Challenges
+Several technical challenges are anticipated. First, chunking granularity presents a
+trade-off: overly small chunks may lack sufficient context while overly large chunks
+may dilute retrieval precision. An ablation study comparing chunk sizes of 256, 512,
+and 1024 tokens is planned. Second, query-document vocabulary mismatch may
+occur when users phrase questions differently from the language used in the document;
+query rewriting or HyDE (Hypothetical Document Embeddings) may be explored as a
+mitigation. Third, multi-hop questions — those requiring synthesis of information
+from multiple non-adjacent passages — are inherently harder for single-step retrieval;
+this represents a known limitation of Naive RAG that may be partially addressed
+through larger top-k retrieval. Fourth, PDF layout complexity (tables, figures, multicolumn text) can degrade text extraction quality, which will need to be handled through
+preprocessing heuristics. 
+18
+REFERENCES
+Abdelghani, R., Wang, Y. H., Yuan, X., Wang, T., Lucas, P., Sauzéon, H., & Oudeyer,
+P. Y. (2023). GPT-3-driven pedagogical agents for training children's curious questionasking skills. International Journal of Artificial Intelligence in Education, 1–36.
+Anthropic. (2024). Contextual retrieval. Anthropic Research Blog.
+https://www.anthropic.com/research/contextual-retrieval
+Asai, A., Wu, Z., Wang, B., Sil, A., & Hajishirzi, H. (2023). Self-RAG: Learning to
+retrieve, generate, and critique through self-reflection. arXiv preprint
+arXiv:2310.11511.
+Borgeaud, S., Mensch, A., Hoffmann, J., Cai, T., Rutherford, E., Millican, K., ... &
+Sifre, L. (2022). Improving language models by retrieving from trillions of tokens.
+Proceedings of the 39th International Conference on Machine Learning (ICML), 2206–
+2240.
+Chen, J., Lin, H., Han, X., & Sun, L. (2024). Benchmarking large language models in
+retrieval-augmented generation. Proceedings of the AAAI Conference on Artificial
+Intelligence, 38(16), 17754–17762.
+Edge, D., Trinh, H., Cheng, N., Bradley, J., Chao, A., Mody, A., ... & Larson, J. (2024).
+From local to global: A graph RAG approach to query-focused summarization. arXiv
+preprint arXiv:2404.16130.
+Es, S., James, J., Espinosa-Anke, L., & Schockaert, S. (2023). RAGAS: Automated
+evaluation of retrieval augmented generation. arXiv preprint arXiv:2309.15217.
+Gao, Y., Xiong, Y., Gao, X., Jia, K., Pan, J., Bi, Y., ... & Wang, H. (2023). Retrievalaugmented generation for large language models: A survey. arXiv preprint
+arXiv:2312.10997. 
+19
+Izacard, G., & Grave, E. (2021). Leveraging passage retrieval with generative models
+for open domain question answering. Proceedings of the 16th Conference of the
+European Chapter of the Association for Computational Linguistics, 874–880.
+Jeong, S., Baek, J., Cho, S., Hwang, S. J., & Park, J. C. (2024). Adaptive-RAG:
+Learning to adapt retrieval-augmented large language models through question
+complexity. arXiv preprint arXiv:2403.14403.
+Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., ... & Fung, P. (2023). Survey of
+hallucination in natural language generation. ACM Computing Surveys, 55(12), 1–38.
+Kamradt, G. (2023). Semantic chunking. GitHub. https://github.com/FullStackRetrievalcom/RetrievalTutorials
+Karpukhin, V., Oğuz, B., Min, S., Lewis, P., Wu, L., Edunov, S., ... & Yih, W. T.
+(2020). Dense passage retrieval for open-domain question answering. Proceedings of
+the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP),
+6769–6781.
+Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., ... & Kiela, D.
+(2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. Advances
+in Neural Information Processing Systems (NeurIPS), 33, 9459–9474.
+Louis, A., van Dijck, G., & Spanakis, G. (2024). Interpretable long-form legal question
+answering with retrieval-augmented large language models. Proceedings of the AAAI
+Conference on Artificial Intelligence, 38(20), 22266–22275.
+Shi, F., Chen, X., Misra, K., Scales, N., Dohan, D., Chi, E. H., ... & Zhou, D. (2023).
+Large language models can be easily distracted by irrelevant context. Proceedings of the
+40th International Conference on Machine Learning (ICML), 31210–31227.
+Xiong, G., Jin, Q., Lu, Z., & Zhang, A. (2024). Benchmarking retrieval-augmented
+generation for medicine. Findings of the Association for Computational Linguistics:
+ACL 2024, 6233–6251. 
