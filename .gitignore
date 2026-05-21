@@ -1,0 +1,19 @@
+# Environment
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Runtime uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
