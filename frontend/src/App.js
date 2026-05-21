@@ -89,8 +89,11 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Intelligent Document Q&A</h1>
-        <p>Upload PDF documents and ask questions in natural language</p>
+        <div className="logo">Q&A</div>
+        <div>
+          <h1>Intelligent Document Q&A</h1>
+          <p>Ask questions, grounded in your PDFs</p>
+        </div>
       </header>
       <div className="app-body">
         <aside className="sidebar">
